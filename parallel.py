@@ -25,6 +25,7 @@ import math
 warnings.filterwarnings("ignore")
 plt.rcParams["figure.figsize"] = (20, 10)
 
+
 def get_prob(counts, N, numQubits):
     keys = list(counts.keys())
     keys.sort()
@@ -38,10 +39,12 @@ def get_prob(counts, N, numQubits):
         prob[int(counts[i][0], 2)] = counts[i][1]
     return prob
 
+
 def L_diag(numQubits):
     if numQubits == 1:
         return -2 * I
     return L_diag(numQubits - 1) ^ I
+
 
 def p(gate, size):
     data = Operator(gate).data
@@ -55,11 +58,13 @@ top_right = (X + (0 + 1j) * Y) / 2
 bot_left = (X - (0 + 1j) * Y) / 2
 bot_right = (I - Z) / 2
 
+
 def EmptyGate(numQubits):
     gate = I - I
     for i in range(numQubits - 1):
         gate = gate ^ I
     return gate
+
 
 def oneAt(i, j, numQubits):
     gate = EmptyGate(1)
@@ -77,6 +82,7 @@ def oneAt(i, j, numQubits):
         i % (2**numQubits / 2), j % (2**numQubits / 2), numQubits - 1
     )
 
+
 def L_cyclic(numQubits):
     gate = EmptyGate(numQubits)
     for i in range(2**numQubits):
@@ -87,6 +93,7 @@ def L_cyclic(numQubits):
                 gate += oneAt(i, j, numQubits)
     return L_diag(numQubits) + gate
 
+
 def L_complete(numQubits):
     gate = EmptyGate(numQubits)
     for i in range(2**numQubits):
@@ -96,6 +103,7 @@ def L_complete(numQubits):
             else:
                 gate += oneAt(i, j, numQubits)
     return gate
+
 
 from qiskit.providers.aer import StatevectorSimulator
 from qiskit.providers.aer import AerSimulator
@@ -238,6 +246,7 @@ def complete_get_statevector_no_trotter(
 
     return np.array(statevector_list).T
 
+
 from scipy.integrate import solve_ivp
 
 
@@ -279,6 +288,7 @@ def exact_complete_get_psi(numQubits, psi_init, gamma, V_diag, g, n, max_step):
 
     return soln.t, soln.y
 
+
 def compare(T, delta_t, N):
     psi = [1 / math.sqrt(8) for i in range(8)]
     V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
@@ -297,8 +307,10 @@ def compare(T, delta_t, N):
     mu_hat, stdev_hat = np.mean(data, axis=0), np.std(data, axis=0)
     return mu_hat, stdev_hat
 
+
 exact_t = np.load("exact_t.npy")
 exact = np.load("exact.npy")
+
 
 def f(T, delta_t, N):
     mu_hat, stdev_hat = compare(T, delta_t, N)
@@ -314,23 +326,26 @@ def f(T, delta_t, N):
         exact_plot.append(exact[0][int(t / 0.001)])
     return err
 
+
 start_time = time.time()
 from concurrent.futures import ProcessPoolExecutor
 
+
 # Function to be executed in parallel
 def calculate_and_save(t):
-    T, delta_t, N = 5, t, 2
+    T, delta_t, N = 50, t, 500
     err = f(T, delta_t, N)
-    plt.plot(err)
-    plt.xlabel("time")
-    plt.ylabel("f")
-    plt.savefig("N=2/delta_t=" + str(round(t, 3)) + ".png")
-    filename = f"N=5/f(T=5,delta_t={round(t, 3)}).npy"
+    # plt.plot(err)
+    # plt.xlabel("time")
+    # plt.ylabel("f")
+    # plt.savefig("N=500/delta_t=" + str(round(t, 3)) + ".png")
+    filename = f"N=500/f(T=500,delta_t={round(t, 3)}).npy"
     np.save(filename, err)
     return err
 
+
 # List of delta_t values
-t_list = np.flip(np.arange(0.005, 0.1, 0.01))
+t_list = np.flip(np.arange(0.04, 0.1, 0.01))
 
 # Execute the tasks in parallel using ProcessPoolExecutor
 with ProcessPoolExecutor() as executor:
