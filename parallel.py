@@ -288,8 +288,7 @@ def exact_complete_get_psi(numQubits, psi_init, gamma, V_diag, g, n, max_step):
 
     return soln.t, soln.y
 
-
-def compare(T, delta_t, N):
+def compare(psi, g, delta_t, delta_x, T, N):
     psi = [1 / math.sqrt(8) for i in range(8)]
     V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
     n = int(T / delta_t)
@@ -299,7 +298,7 @@ def compare(T, delta_t, N):
         data[i] = (
             np.abs(
                 complete_get_statevector_no_trotter(
-                    3, psi, 1, delta_t, 1 / math.sqrt(2), V_diag, n, 1024 * 4
+                    3, psi, g, delta_t, delta_x, V_diag, n, 1024 * 4
                 )[0]
             )
             ** 2
@@ -307,49 +306,44 @@ def compare(T, delta_t, N):
     mu_hat, stdev_hat = np.mean(data, axis=0), np.std(data, axis=0)
     return mu_hat, stdev_hat
 
+exact_t = np.load("gamma=2/exact_t.npy")
+exact = np.load("gamma=2/exact.npy")
 
-exact_t = np.load("exact_t.npy")
-exact = np.load("exact.npy")
-
-
-def f(T, delta_t, N):
-    mu_hat, stdev_hat = compare(T, delta_t, N)
+def f(psi, g, delta_t, delta_x, T, N):
+    mu_hat, stdev_hat = compare(psi, g, delta_t, delta_x, T, N)
     err = np.zeros_like(mu_hat)
+    exact_t = np.load("gamma=2/exact_t.npy")
+    exact = np.load("gamma=2/exact.npy")
     exact_plot = []
     exact_plot_t = []
     for i in range(2, len(err)):
         t = round(i * delta_t, 3)
         exact_plot_t.append(t)
-        err[i] = np.abs(exact[0][int(t / 0.001)] - mu_hat[i]) / (
-            stdev_hat[i] / np.sqrt(N)
-        )
+        err[i] = np.abs(exact[0][int(t / 0.001)] - mu_hat[i]) / (stdev_hat[i] / np.sqrt(N))
         exact_plot.append(exact[0][int(t / 0.001)])
     return err
 
-
 start_time = time.time()
 from concurrent.futures import ProcessPoolExecutor
-
+import os
 
 # Function to be executed in parallel
-def calculate_and_save(t):
-    T, delta_t, N = 50, t, 500
-    err = f(T, delta_t, N)
-    # plt.plot(err)
-    # plt.xlabel("time")
-    # plt.ylabel("f")
-    # plt.savefig("N=500/delta_t=" + str(round(t, 3)) + ".png")
-    filename = f"N=500/f(T=500,delta_t={round(t, 3)}).npy"
+def calculate_and_save(dx):
+    t = 0.05
+    err = f(psi=[1 / math.sqrt(8) for i in range(8)], g=1, delta_t=t, delta_x=dx, T=50, N=500)
+    if not os.path.exists("delta_xs"):
+        os.makedirs("delta_xs")
+    filename = f"delta_xs/f(T=500,delta_x={round(dx, 3)}, delta_t={round(t, 3)}).npy"
     np.save(filename, err)
     return err
 
 
-# List of delta_t values
-t_list = np.flip(np.arange(0.04, 0.1, 0.01))
+# List of delta_x values
+delta_xs = np.arange(0.1, 1.1, 0.1)
 
 # Execute the tasks in parallel using ProcessPoolExecutor
 with ProcessPoolExecutor() as executor:
-    executor.map(calculate_and_save, t_list)
+    executor.map(calculate_and_save, delta_xs)
 
 print("--- %s para ---" % (time.time() - start_time))
 
