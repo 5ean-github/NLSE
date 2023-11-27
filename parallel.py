@@ -207,9 +207,7 @@ def complete_get_statevector_no_trotter(
     L = np.ones((8, 8), dtype=complex)
     np.fill_diagonal(L, -7 + 0j)
 
-    data = np.zeros((n + 1, len(psi)))
     prob = np.square(psi)
-    data[0] = prob
 
     statevector_list = [psi]
 
@@ -230,18 +228,53 @@ def complete_get_statevector_no_trotter(
         job_sim = backend_sim.run(transpile(copy, backend_sim), shots=N)
         result_sim = job_sim.result()
         prob = get_prob(result_sim.get_counts(copy), N, numQubits)
-        data[j + 1] = prob
 
-        statevector_circuit = copy.copy()  # This creates a new copy of the circuit
-        statevector_circuit.remove_final_measurements()  # This removes the measurements from the copied circuit
+        # statevector_circuit = copy.copy()  # This creates a new copy of the circuit
+        # statevector_circuit.remove_final_measurements()  # This removes the measurements from the copied circuit
+        copy.remove_final_measurements()
+        # 2. Use the statevector_simulator to get the statevector
+        backend_statevector = Aer.get_backend("statevector_simulator")
+        job_statevector = backend_statevector.run(
+            transpile(copy, backend_statevector)
+        ).result()
+        statevector = job_statevector.get_statevector()
+        statevector_list.append(statevector)
+        psi = statevector
+
+    return np.array(statevector_list).T
+
+
+def complete_get_statevector_no_trotter_no_meas(
+    numQubits, psi, g, delta_t, delta_x, V_diag, n, N
+):
+    gamma = 1 / (2 * delta_x**2)
+    # L = L_complete(numQubits)
+    L = np.ones((8, 8), dtype=complex)
+    np.fill_diagonal(L, -7 + 0j)
+
+    prob = np.square(psi)
+
+    statevector_list = [psi]
+
+    for j in range(n):
+        if j % 100 == 0:
+            print(j)
+        qc = QuantumCircuit(numQubits)
+        qc.initialize(psi, qc.qubits)  # type: ignore
+
+        H = -gamma * L + np.diag(V_diag) - np.diag(g * prob)
+
+        gate = Operator(expm(-1j * H * delta_t)).to_instruction()
+        qc.append(gate, qc.qubits)
 
         # 2. Use the statevector_simulator to get the statevector
         backend_statevector = Aer.get_backend("statevector_simulator")
         job_statevector = backend_statevector.run(
-            transpile(statevector_circuit, backend_statevector)
+            transpile(qc, backend_statevector)
         ).result()
         statevector = job_statevector.get_statevector()
         statevector_list.append(statevector)
+        prob = np.abs(statevector) ** 2
         psi = statevector
 
     return np.array(statevector_list).T
@@ -299,7 +332,7 @@ def compare(T, delta_t, N):
         data[i] = (
             np.abs(
                 complete_get_statevector_no_trotter(
-                    3, psi, 1, delta_t, 1 / math.sqrt(2), V_diag, n, 1024 * 4
+                    3, psi, 1, delta_t, 1 / math.sqrt(2), V_diag, n, 1024 * 2
                 )[0]
             )
             ** 2
@@ -339,18 +372,19 @@ def calculate_and_save(t):
     # plt.xlabel("time")
     # plt.ylabel("f")
     # plt.savefig("N=500/delta_t=" + str(round(t, 3)) + ".png")
-    filename = f"N=500/f(T=500,delta_t={round(t, 3)}).npy"
+    filename = f"M=2048/f(T=500,delta_t={round(t, 3)}).npy"
     np.save(filename, err)
     return err
 
 
 # List of delta_t values
-t_list = np.flip(np.arange(0.04, 0.1, 0.01))
+t_list = np.flip(np.arange(0.02, 0.1, 0.01))
+print(t_list)
 
-# Execute the tasks in parallel using ProcessPoolExecutor
+# # Execute the tasks in parallel using ProcessPoolExecutor
 with ProcessPoolExecutor() as executor:
     executor.map(calculate_and_save, t_list)
 
-print("--- %s para ---" % (time.time() - start_time))
+# print("--- %s para ---" % (time.time() - start_time))
 
 # # The rest of your code that needs tstart_time = time.time()o run after parallel execution
