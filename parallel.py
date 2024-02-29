@@ -2,23 +2,15 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from qiskit import Aer
-from qiskit.opflow import CircuitSampler, PauliOp, MatrixEvolution, Suzuki
 from qiskit.opflow import I, X, Y, Z, Zero, One, Plus, Minus, CX, CZ, Swap
-from qiskit.circuit import Parameter
 from qiskit import (
     QuantumCircuit,
     Aer,
-    assemble,
-    QuantumRegister,
-    IBMQ,
     execute,
     transpile,
 )
 from qiskit.quantum_info.operators import Operator, Pauli
-from qiskit.extensions import HamiltonianGate
-from qiskit.visualization import plot_histogram, plot_bloch_multivector
 import random
-from qiskit.tools.visualization import circuit_drawer
 import warnings
 import math
 
@@ -78,20 +70,7 @@ def oneAt(i, j, numQubits):
         gate = bot_right
     if numQubits == 1:
         return gate
-    return gate ^ oneAt(
-        i % (2**numQubits / 2), j % (2**numQubits / 2), numQubits - 1
-    )
-
-
-def L_cyclic(numQubits):
-    gate = EmptyGate(numQubits)
-    for i in range(2**numQubits):
-        for j in range(2**numQubits):
-            if (i, j) == (0, 2**numQubits - 1) or (j, i) == (0, 2**numQubits - 1):
-                gate += oneAt(i, j, numQubits)
-            if abs(i - j) == 1:
-                gate += oneAt(i, j, numQubits)
-    return L_diag(numQubits) + gate
+    return gate ^ oneAt(i % (2**numQubits / 2), j % (2**numQubits / 2), numQubits - 1)
 
 
 def L_complete(numQubits):
@@ -212,8 +191,6 @@ def complete_get_statevector_no_trotter(
     statevector_list = [psi]
 
     for j in range(n):
-        if j % 100 == 0:
-            print(j)
         qc = QuantumCircuit(numQubits)
         qc.initialize(psi, qc.qubits)  # type: ignore
 
@@ -332,7 +309,7 @@ def compare(T, delta_t, N):
         data[i] = (
             np.abs(
                 complete_get_statevector_no_trotter(
-                    3, psi, 1, delta_t, 1 / math.sqrt(2), V_diag, n, 1024 * 2
+                    3, psi, 1, delta_t, 1 / math.sqrt(2), V_diag, n, 256
                 )[0]
             )
             ** 2
@@ -360,31 +337,87 @@ def f(T, delta_t, N):
     return err
 
 
+def L1(T, delta_t, N):
+    sqrt_inv_8 = 1 / math.sqrt(8)
+    sqrt_inv_2 = 1 / math.sqrt(2)
+    psi = [sqrt_inv_8 for _ in range(8)]
+    V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
+    n = int(T / delta_t)
+    data = np.zeros((N, n + 1))
+    err = np.zeros(n + 1)
+    diff = np.zeros((N, n + 1))
+    for i in range(N):
+        print(str(i) + "/" + str(N))
+        data[i] = (
+            np.abs(
+                complete_get_statevector_no_trotter(
+                    3, psi, 1, delta_t, sqrt_inv_2, V_diag, n, 256
+                )[0]
+            )
+            ** 2
+        )
+        for j in range(n + 1):
+            t = round(j * delta_t, 3)
+            diff[i][j] = np.abs(exact[0][int(t / 0.001)] - data[i][j])
+    for j in range(n + 1):
+        err[j] = np.mean(diff[:, j])
+    return err
+
+
+def optimized_L1(T, delta_t, N, M):
+    sqrt_inv_8 = 1 / math.sqrt(8)
+    sqrt_inv_2 = 1 / math.sqrt(2)
+    psi = [sqrt_inv_8 for _ in range(8)]
+    V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
+    n = int(T / delta_t)
+    t_values = np.round(np.arange(0, T + 0.0001, delta_t), 3)
+    exact_values = np.array([exact[0][int(t / 0.001)] for t in t_values])
+    diffs = []
+    for i in range(N):
+        print(str(i) + "/" + str(N))
+        data = (
+            np.abs(
+                complete_get_statevector_no_trotter(
+                    3, psi, 1, delta_t, sqrt_inv_2, V_diag, n, M
+                )[0]
+            )
+            ** 2
+        )
+        diff = np.abs(exact_values - data)
+        diffs.append(diff)
+
+    diff_array = np.array(diffs)
+    err = np.mean(diff_array, axis=0)
+    return err
+
+
 start_time = time.time()
 from concurrent.futures import ProcessPoolExecutor
 
 
 # Function to be executed in parallel
 def calculate_and_save(t):
-    T, delta_t, N = 50, t, 500
-    err = f(T, delta_t, N)
+    T, delta_t, N = 50, t, 250
+    M = 4
+    err = optimized_L1(T, delta_t, N, M)
     # plt.plot(err)
     # plt.xlabel("time")
     # plt.ylabel("f")
     # plt.savefig("N=500/delta_t=" + str(round(t, 3)) + ".png")
-    filename = f"M=2048/f(T=500,delta_t={round(t, 3)}).npy"
+    filename = f"M={str(M)}/f(T=50,delta_t={str(round(delta_t,3))}).npy"
     np.save(filename, err)
     return err
 
 
 # List of delta_t values
-t_list = np.flip(np.arange(0.02, 0.1, 0.01))
+t_list = np.flip(np.arange(0.01, 0.1, 0.01))
+# t_list = [0.04]
 print(t_list)
 
 # # Execute the tasks in parallel using ProcessPoolExecutor
 with ProcessPoolExecutor() as executor:
     executor.map(calculate_and_save, t_list)
 
-# print("--- %s para ---" % (time.time() - start_time))
+print("--- %s para ---" % (time.time() - start_time))
 
 # # The rest of your code that needs tstart_time = time.time()o run after parallel execution
