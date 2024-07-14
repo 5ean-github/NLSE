@@ -396,9 +396,9 @@ from concurrent.futures import ProcessPoolExecutor
 
 
 # Function to be executed in parallel
-def calculate_and_save(t):
+def calculate_and_save(t, measurements=4):
     T, delta_t, N = 50, t, 250
-    M = 4
+    M = measurements
     err = optimized_L1(T, delta_t, N, M)
     # plt.plot(err)
     # plt.xlabel("time")
@@ -414,9 +414,13 @@ t_list = np.flip(np.arange(0.01, 0.1, 0.01))
 # t_list = [0.04]
 print(t_list)
 
-# # Execute the tasks in parallel using ProcessPoolExecutor
+M_list=[5,7,9,10,11,12,13,14,15]
+
 with ProcessPoolExecutor() as executor:
-    executor.map(calculate_and_save, t_list)
+    futures = []
+    for t in t_list:
+        for M in M_list:
+            futures.append(executor.submit(calculate_and_save, t, M))
 
 print("--- %s para ---" % (time.time() - start_time))
 
