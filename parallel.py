@@ -1,4 +1,5 @@
 import time
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from qiskit import Aer
@@ -405,6 +406,7 @@ def calculate_and_save(t, measurements=4):
     # plt.ylabel("f")
     # plt.savefig("N=500/delta_t=" + str(round(t, 3)) + ".png")
     filename = f"M={str(M)}/f(T=50,delta_t={str(round(delta_t,3))}).npy"
+    os.makedirs(os.path.dirname("M=" + str(M) + "/"), exist_ok=True)
     np.save(filename, err)
     return err
 
