@@ -131,7 +131,7 @@ def complete(numQubits, psi, g, delta_t, delta_x, V_diag, n, N):
 
     return data.T
 
-
+# not used
 def complete_get_statevector(numQubits, psi, g, delta_t, delta_x, V_diag, n, N):
     gamma = 1 / (2 * delta_x**2)
     L = L_complete(numQubits)
@@ -384,6 +384,7 @@ def optimized_L1(T, delta_t, N, M):
             )
             ** 2
         )
+        print(data.shape)
         diff = np.abs(exact_values - data)
         diffs.append(diff)
 
@@ -392,20 +393,21 @@ def optimized_L1(T, delta_t, N, M):
     return err
 
 
+
 start_time = time.time()
 from concurrent.futures import ProcessPoolExecutor
 
 
 # Function to be executed in parallel
 def calculate_and_save(t, measurements=4):
-    T, delta_t, N = 50, t, 250
+    T, delta_t, N = 50, t, 500
     M = measurements
     err = optimized_L1(T, delta_t, N, M)
     # plt.plot(err)
     # plt.xlabel("time")
     # plt.ylabel("f")
     # plt.savefig("N=500/delta_t=" + str(round(t, 3)) + ".png")
-    filename = f"M={str(M)}/f(T=50,delta_t={str(round(delta_t,3))}).npy"
+    filename = f"M={str(M)}/f(T=50,delta_t={str(round(delta_t,4))}).npy"
     os.makedirs(os.path.dirname("M=" + str(M) + "/"), exist_ok=True)
     np.save(filename, err)
     return err
@@ -420,10 +422,14 @@ M_list=[5,7,9,10,11,12,13,14,15]
 
 with ProcessPoolExecutor() as executor:
     futures = []
-    for t in t_list:
-        for M in M_list:
-            futures.append(executor.submit(calculate_and_save, t, M))
+    # for t in t_list:
+    #     for M in M_list:
+    #         futures.append(executor.submit(calculate_and_save, t, M))
+    #futures.append(executor.submit(calculate_and_save, 0.0125, 5))
+    futures.append(executor.submit(calculate_and_save, 0.025, 10))
+    futures.append(executor.submit(calculate_and_save, 0.008, 4))
+    futures.append(executor.submit(calculate_and_save, 0.016, 8))
 
 print("--- %s para ---" % (time.time() - start_time))
 
-# # The rest of your code that needs tstart_time = time.time()o run after parallel execution
+# The rest of your code that needs tstart_time = time.time()o run after parallel execution
