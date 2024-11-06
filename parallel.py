@@ -18,6 +18,9 @@ import math
 warnings.filterwarnings("ignore")
 plt.rcParams["figure.figsize"] = (20, 10)
 
+# Helper functions for the main simulation
+# |||||||
+# |||||||
 
 def get_prob(counts, N, numQubits):
     keys = list(counts.keys())
@@ -84,101 +87,104 @@ def L_complete(numQubits):
                 gate += oneAt(i, j, numQubits)
     return gate
 
+# |||||||
+# |||||||
+
 
 from qiskit.providers.aer import StatevectorSimulator
 from qiskit.providers.aer import AerSimulator
 from scipy.linalg import expm
 
+# # Unused
+# def complete(numQubits, psi, g, delta_t, delta_x, V_diag, n, N):
+#     gamma = 1 / (2 * delta_x**2)
+#     L = L_complete(numQubits)
+#     U = (-1 * gamma * L * delta_t).exp_i()  # u.exp_i() returns e^(-iu)
+#     U = Operator(U)
 
-def complete(numQubits, psi, g, delta_t, delta_x, V_diag, n, N):
-    gamma = 1 / (2 * delta_x**2)
-    L = L_complete(numQubits)
-    U = (-1 * gamma * L * delta_t).exp_i()  # u.exp_i() returns e^(-iu)
-    U = Operator(U)
+#     data = np.zeros((n + 1, len(psi)))
+#     prob = np.square(psi)
+#     data[0] = prob  # [[psi[i]**2 for i in range(len(psi))]]
 
-    data = np.zeros((n + 1, len(psi)))
-    prob = np.square(psi)
-    data[0] = prob  # [[psi[i]**2 for i in range(len(psi))]]
+#     # step 1
+#     qc = QuantumCircuit(numQubits)
+#     qc.initialize(psi, qc.qubits)
+#     qc.append(U, qc.qubits)
 
-    # step 1
-    qc = QuantumCircuit(numQubits)
-    qc.initialize(psi, qc.qubits)
-    qc.append(U, qc.qubits)
+#     # step 4
 
-    # step 4
+#     for j in range(n):  # step 5&
+#         # step 6
+#         V = [[0 for k in range(2**numQubits)] for i in range(2**numQubits)]
+#         for i in range(2**numQubits):
+#             V[i][i] = np.exp((0 + 1j) * (g * prob[i] - V_diag[i]) * delta_t)
+#         # V.append(Operator(Op)) #append V_j
+#         # qc.append(U,qc.qubits)
+#         qc.append(Operator(V), qc.qubits)
 
-    for j in range(n):  # step 5&
-        # step 6
-        V = [[0 for k in range(2**numQubits)] for i in range(2**numQubits)]
-        for i in range(2**numQubits):
-            V[i][i] = np.exp((0 + 1j) * (g * prob[i] - V_diag[i]) * delta_t)
-        # V.append(Operator(Op)) #append V_j
-        # qc.append(U,qc.qubits)
-        qc.append(Operator(V), qc.qubits)
+#         # measure ψ(j + 1)
+#         copy = qc.copy()
+#         copy.measure_all()
+#         backend_sim = Aer.get_backend("qasm_simulator")
+#         job_sim = backend_sim.run(transpile(copy, backend_sim), shots=N)
+#         result_sim = job_sim.result()
+#         prob = get_prob(result_sim.get_counts(copy), N, numQubits)
+#         data[j + 1] = prob  # data.append(prob) #
+#         # print(prob)
 
-        # measure ψ(j + 1)
-        copy = qc.copy()
-        copy.measure_all()
-        backend_sim = Aer.get_backend("qasm_simulator")
-        job_sim = backend_sim.run(transpile(copy, backend_sim), shots=N)
-        result_sim = job_sim.result()
-        prob = get_prob(result_sim.get_counts(copy), N, numQubits)
-        data[j + 1] = prob  # data.append(prob) #
-        # print(prob)
+#         # step 7
+#         qc.append(U, qc.qubits)
 
-        # step 7
-        qc.append(U, qc.qubits)
+#     return data.T
 
-    return data.T
+# # Unused
+# def complete_get_statevector(numQubits, psi, g, delta_t, delta_x, V_diag, n, N):
+#     gamma = 1 / (2 * delta_x**2)
+#     L = L_complete(numQubits)
+#     U = (-1 * gamma * L * delta_t).exp_i()
+#     U = Operator(U)
 
-# not used
-def complete_get_statevector(numQubits, psi, g, delta_t, delta_x, V_diag, n, N):
-    gamma = 1 / (2 * delta_x**2)
-    L = L_complete(numQubits)
-    U = (-1 * gamma * L * delta_t).exp_i()
-    U = Operator(U)
+#     data = np.zeros((n + 1, len(psi)))
+#     prob = np.square(psi)
+#     data[0] = prob
 
-    data = np.zeros((n + 1, len(psi)))
-    prob = np.square(psi)
-    data[0] = prob
+#     statevector_list = [psi]
 
-    statevector_list = [psi]
+#     for j in range(n):  # step 5&
+#         if j % 100 == 0:
+#             print(j)
+#         qc = QuantumCircuit(numQubits)
+#         qc.initialize(psi, qc.qubits)
+#         qc.append(U, qc.qubits)
 
-    for j in range(n):  # step 5&
-        if j % 100 == 0:
-            print(j)
-        qc = QuantumCircuit(numQubits)
-        qc.initialize(psi, qc.qubits)
-        qc.append(U, qc.qubits)
+#         V = [[0 for k in range(2**numQubits)] for i in range(2**numQubits)]
+#         for i in range(2**numQubits):
+#             V[i][i] = np.exp((0 + 1j) * (g * prob[i] - V_diag[i]) * delta_t)
+#         qc.append(Operator(V), qc.qubits)
 
-        V = [[0 for k in range(2**numQubits)] for i in range(2**numQubits)]
-        for i in range(2**numQubits):
-            V[i][i] = np.exp((0 + 1j) * (g * prob[i] - V_diag[i]) * delta_t)
-        qc.append(Operator(V), qc.qubits)
+#         copy = qc.copy()
+#         copy.measure_all()
+#         backend_sim = Aer.get_backend("qasm_simulator")
+#         job_sim = backend_sim.run(transpile(copy, backend_sim), shots=N)
+#         result_sim = job_sim.result()
+#         prob = get_prob(result_sim.get_counts(copy), N, numQubits)
+#         data[j + 1] = prob
 
-        copy = qc.copy()
-        copy.measure_all()
-        backend_sim = Aer.get_backend("qasm_simulator")
-        job_sim = backend_sim.run(transpile(copy, backend_sim), shots=N)
-        result_sim = job_sim.result()
-        prob = get_prob(result_sim.get_counts(copy), N, numQubits)
-        data[j + 1] = prob
+#         statevector_circuit = copy.copy()  # This creates a new copy of the circuit
+#         statevector_circuit.remove_final_measurements()  # This removes the measurements from the copied circuit
 
-        statevector_circuit = copy.copy()  # This creates a new copy of the circuit
-        statevector_circuit.remove_final_measurements()  # This removes the measurements from the copied circuit
+#         # 2. Use the statevector_simulator to get the statevector
+#         backend_statevector = Aer.get_backend("statevector_simulator")
+#         job_statevector = backend_statevector.run(
+#             transpile(statevector_circuit, backend_statevector)
+#         ).result()
+#         statevector = job_statevector.get_statevector()
+#         statevector_list.append(statevector)
+#         psi = statevector
 
-        # 2. Use the statevector_simulator to get the statevector
-        backend_statevector = Aer.get_backend("statevector_simulator")
-        job_statevector = backend_statevector.run(
-            transpile(statevector_circuit, backend_statevector)
-        ).result()
-        statevector = job_statevector.get_statevector()
-        statevector_list.append(statevector)
-        psi = statevector
+#     return np.array(statevector_list)
 
-    return np.array(statevector_list)
-
-
+# main function of the simulation that returns statevectors (psi(0)-psi(7)) at each step
 def complete_get_statevector_no_trotter(
     numQubits, psi, g, delta_t, delta_x, V_diag, n, N
 ):
@@ -191,7 +197,7 @@ def complete_get_statevector_no_trotter(
 
     statevector_list = [psi]
 
-    for j in range(n):
+    for _ in range(n):
         qc = QuantumCircuit(numQubits)
         qc.initialize(psi, qc.qubits)  # type: ignore
 
@@ -221,41 +227,41 @@ def complete_get_statevector_no_trotter(
 
     return np.array(statevector_list).T
 
+# Unused
+# def complete_get_statevector_no_trotter_no_meas(
+#     numQubits, psi, g, delta_t, delta_x, V_diag, n, N
+# ):
+#     gamma = 1 / (2 * delta_x**2)
+#     # L = L_complete(numQubits)
+#     L = np.ones((8, 8), dtype=complex)
+#     np.fill_diagonal(L, -7 + 0j)
 
-def complete_get_statevector_no_trotter_no_meas(
-    numQubits, psi, g, delta_t, delta_x, V_diag, n, N
-):
-    gamma = 1 / (2 * delta_x**2)
-    # L = L_complete(numQubits)
-    L = np.ones((8, 8), dtype=complex)
-    np.fill_diagonal(L, -7 + 0j)
+#     prob = np.square(psi)
 
-    prob = np.square(psi)
+#     statevector_list = [psi]
 
-    statevector_list = [psi]
+#     for j in range(n):
+#         if j % 100 == 0:
+#             print(j)
+#         qc = QuantumCircuit(numQubits)
+#         qc.initialize(psi, qc.qubits)  # type: ignore
 
-    for j in range(n):
-        if j % 100 == 0:
-            print(j)
-        qc = QuantumCircuit(numQubits)
-        qc.initialize(psi, qc.qubits)  # type: ignore
+#         H = -gamma * L + np.diag(V_diag) - np.diag(g * prob)
 
-        H = -gamma * L + np.diag(V_diag) - np.diag(g * prob)
+#         gate = Operator(expm(-1j * H * delta_t)).to_instruction()
+#         qc.append(gate, qc.qubits)
 
-        gate = Operator(expm(-1j * H * delta_t)).to_instruction()
-        qc.append(gate, qc.qubits)
+#         # 2. Use the statevector_simulator to get the statevector
+#         backend_statevector = Aer.get_backend("statevector_simulator")
+#         job_statevector = backend_statevector.run(
+#             transpile(qc, backend_statevector)
+#         ).result()
+#         statevector = job_statevector.get_statevector()
+#         statevector_list.append(statevector)
+#         prob = np.abs(statevector) ** 2
+#         psi = statevector
 
-        # 2. Use the statevector_simulator to get the statevector
-        backend_statevector = Aer.get_backend("statevector_simulator")
-        job_statevector = backend_statevector.run(
-            transpile(qc, backend_statevector)
-        ).result()
-        statevector = job_statevector.get_statevector()
-        statevector_list.append(statevector)
-        prob = np.abs(statevector) ** 2
-        psi = statevector
-
-    return np.array(statevector_list).T
+#     return np.array(statevector_list).T
 
 
 from scipy.integrate import solve_ivp
@@ -272,15 +278,14 @@ def deriv(t, psi, gamma, numQubits, V, g):
     return psidot
 
 
-def exact_complete(numQubits, psi_init, gamma, V_diag, g, n, max_step):
+def exact_complete(numQubits, psi_init, gamma, V_diag, g, n,delta_t,T):
     V = np.diag(V_diag)
 
     p = (gamma, numQubits, V, g)
-    t0, tf = 0, n
+    t0, tf = 0, T
 
     psi = tuple([complex(psi_init[i]) for i in range(len(psi_init))])
-    soln = solve_ivp(deriv, (t0, tf), psi, args=p, max_step=max_step)
-
+    soln = solve_ivp(deriv, (t0, tf), psi, args=p, t_eval=np.arange(0,50+delta_t,delta_t))
     for j in range(len(soln.y)):
         for i in range(len(soln.y[j])):
             soln.y[j][i] = np.absolute(soln.y[j][i]) ** 2  # |ψ|^2
@@ -288,93 +293,97 @@ def exact_complete(numQubits, psi_init, gamma, V_diag, g, n, max_step):
     return soln.t, soln.y
 
 
-def exact_complete_get_psi(numQubits, psi_init, gamma, V_diag, g, n, max_step):
-    V = np.diag(V_diag)
+# def exact_complete_get_psi(numQubits, psi_init, gamma, V_diag, g, n,delta_t,T):
+#     V = np.diag(V_diag)
 
-    p = (gamma, numQubits, V, g)
-    t0, tf = 0, n
+#     p = (gamma, numQubits, V, g)
+#     t0, tf = 0, T
 
-    psi = tuple([complex(psi_init[i]) for i in range(len(psi_init))])
-    soln = solve_ivp(deriv, (t0, tf), psi, args=p, max_step=max_step)
+#     psi = tuple([complex(psi_init[i]) for i in range(len(psi_init))])
+#     soln = solve_ivp(deriv, (t0, tf), psi, args=p, t_eval=np.arange(0,50+delta_t,delta_t))
+#     return soln.t, soln.y
 
-    return soln.t, soln.y
 
-
-def compare(T, delta_t, N):
-    psi = [1 / math.sqrt(8) for i in range(8)]
-    V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
-    n = int(T / delta_t)
-    data = np.zeros((N, n + 1))
-    for i in range(N):
-        print(str(i) + "/" + str(N))
-        data[i] = (
-            np.abs(
-                complete_get_statevector_no_trotter(
-                    3, psi, 1, delta_t, 1 / math.sqrt(2), V_diag, n, 256
-                )[0]
-            )
-            ** 2
-        )
-    mu_hat, stdev_hat = np.mean(data, axis=0), np.std(data, axis=0)
-    return mu_hat, stdev_hat
+# def compare(T, delta_t, N):
+#     psi = [1 / math.sqrt(8) for i in range(8)]
+#     V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
+#     n = int(T / delta_t)
+#     data = np.zeros((N, n + 1))
+#     for i in range(N):
+#         print(str(i) + "/" + str(N))
+#         data[i] = (
+#             np.abs(
+#                 complete_get_statevector_no_trotter(
+#                     3, psi, 1, delta_t, 1 / math.sqrt(2), V_diag, n, 256
+#                 )[0]
+#             )
+#             ** 2
+#         )
+#     mu_hat, stdev_hat = np.mean(data, axis=0), np.std(data, axis=0)
+#     return mu_hat, stdev_hat
 
 
 exact_t = np.load("exact_t.npy")
 exact = np.load("exact.npy")
 
 
-def f(T, delta_t, N):
-    mu_hat, stdev_hat = compare(T, delta_t, N)
-    err = np.zeros_like(mu_hat)
-    exact_plot = []
-    exact_plot_t = []
-    for i in range(2, len(err)):
-        t = round(i * delta_t, 3)
-        exact_plot_t.append(t)
-        err[i] = np.abs(exact[0][int(t / 0.001)] - mu_hat[i]) / (
-            stdev_hat[i] / np.sqrt(N)
-        )
-        exact_plot.append(exact[0][int(t / 0.001)])
-    return err
+# def f(T, delta_t, N):
+#     mu_hat, stdev_hat = compare(T, delta_t, N)
+#     err = np.zeros_like(mu_hat)
+#     exact_plot = []
+#     exact_plot_t = []
+#     for i in range(2, len(err)):
+#         t = round(i * delta_t, 3)
+#         exact_plot_t.append(t)
+#         err[i] = np.abs(exact[0][int(t / 0.001)] - mu_hat[i]) / (
+#             stdev_hat[i] / np.sqrt(N)
+#         )
+#         exact_plot.append(exact[0][int(t / 0.001)])
+#     return err
 
-
-def L1(T, delta_t, N):
-    sqrt_inv_8 = 1 / math.sqrt(8)
-    sqrt_inv_2 = 1 / math.sqrt(2)
-    psi = [sqrt_inv_8 for _ in range(8)]
-    V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
-    n = int(T / delta_t)
-    data = np.zeros((N, n + 1))
-    err = np.zeros(n + 1)
-    diff = np.zeros((N, n + 1))
-    for i in range(N):
-        print(str(i) + "/" + str(N))
-        data[i] = (
-            np.abs(
-                complete_get_statevector_no_trotter(
-                    3, psi, 1, delta_t, sqrt_inv_2, V_diag, n, 256
-                )[0]
-            )
-            ** 2
-        )
-        for j in range(n + 1):
-            t = round(j * delta_t, 3)
-            diff[i][j] = np.abs(exact[0][int(t / 0.001)] - data[i][j])
-    for j in range(n + 1):
-        err[j] = np.mean(diff[:, j])
-    return err
+# Unused
+# def L1(T, delta_t, N):
+#     sqrt_inv_8 = 1 / math.sqrt(8)
+#     sqrt_inv_2 = 1 / math.sqrt(2)
+#     psi = [sqrt_inv_8 for _ in range(8)]
+#     V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
+#     n = int(T / delta_t)
+#     data = np.zeros((N, n + 1))
+#     err = np.zeros(n + 1)
+#     diff = np.zeros((N, n + 1))
+#     for i in range(N):
+#         print(str(i) + "/" + str(N))
+#         data[i] = (
+#             np.abs(
+#                 complete_get_statevector_no_trotter(
+#                     3, psi, 1, delta_t, sqrt_inv_2, V_diag, n, 256
+#                 )[0]
+#             )
+#             ** 2
+#         )
+#         for j in range(n + 1):
+#             t = round(j * delta_t, 3)
+#             diff[i][j] = np.abs(exact[0][int(t / 0.001)] - data[i][j])
+#     for j in range(n + 1):
+#         err[j] = np.mean(diff[:, j])
+#     return err
 
 
 def optimized_L1(T, delta_t, N, M):
     sqrt_inv_8 = 1 / math.sqrt(8)
     sqrt_inv_2 = 1 / math.sqrt(2)
-    psi = [sqrt_inv_8 for _ in range(8)]
-    V_diag = [1, 0, 0, 0, 0, 0, 0, 0]
-    n = int(T / delta_t)
-    t_values = np.round(np.arange(0, T + 0.0001, delta_t), 3)
-    exact_values = np.array([exact[0][int(t / 0.001)] for t in t_values])
+    gamma = 1 / (2 * sqrt_inv_2**2)
+    psi = [sqrt_inv_8 for _ in range(8)] # initial condition
+    V_diag = [1, 0, 0, 0, 0, 0, 0, 0] 
+    n = int(T / delta_t) # number of steps in the simulation
+    # t_values = np.arange(0, T + delta_t, delta_t)
+    exact_values = exact_complete(3,psi,gamma,V_diag,1,n,delta_t,T)[1][0] # the exact values of psi(0)
+    # print("t_values: ", t_values.shape)
+    # print("exact_values: ",exact_complete_get_psi(3,psi,gamma,V_diag,1,n,delta_t,T)[1].shape)
+    # t_values = np.round(np.arange(0, T + delta_t, delta_t), 3) # time of each step in the simulation
+    # exact_values = np.array([exact[0][int(t / 0.001)] for t in t_values]) 
     diffs = []
-    for i in range(N):
+    for i in range(N): # run N simulations
         print(str(i) + "/" + str(N))
         data = (
             np.abs(
@@ -383,13 +392,13 @@ def optimized_L1(T, delta_t, N, M):
                 )[0]
             )
             ** 2
-        )
-        print(data.shape)
-        diff = np.abs(exact_values - data)
+        ) # get data from simulation
+        print(data.shape) # should be the same shape as exact_values
+        diff = np.abs(exact_values - data) # get the L1 difference between simulation and exact values
         diffs.append(diff)
 
     diff_array = np.array(diffs)
-    err = np.mean(diff_array, axis=0)
+    err = np.mean(diff_array, axis=0) # the error is the average difference across N simulations
     return err
 
 
@@ -399,8 +408,8 @@ from concurrent.futures import ProcessPoolExecutor
 
 
 # Function to be executed in parallel
-def calculate_and_save(t, measurements=4):
-    T, delta_t, N = 50, t, 500
+def calculate_and_save(t, measurements=32):
+    T, delta_t, N = 50, t, 2
     M = measurements
     err = optimized_L1(T, delta_t, N, M)
     # plt.plot(err)
@@ -414,21 +423,24 @@ def calculate_and_save(t, measurements=4):
 
 
 # List of delta_t values
-t_list = np.flip(np.arange(0.01, 0.1, 0.01))
+# t_list = np.flip(np.arange(0.01, 0.1, 0.01))
+t_list = [0.1]
 # t_list = [0.04]
 print(t_list)
 
-M_list=[5,7,9,10,11,12,13,14,15]
+# M_list=[5,7,9,10,11,12,13,14,15]
+# created a temporary list with only one value for testing
+M_list=[5]
 
 with ProcessPoolExecutor() as executor:
     futures = []
     # for t in t_list:
     #     for M in M_list:
     #         futures.append(executor.submit(calculate_and_save, t, M))
-    #futures.append(executor.submit(calculate_and_save, 0.0125, 5))
-    futures.append(executor.submit(calculate_and_save, 0.025, 10))
-    futures.append(executor.submit(calculate_and_save, 0.008, 4))
-    futures.append(executor.submit(calculate_and_save, 0.016, 8))
+    futures.append(executor.submit(calculate_and_save, 0.0125, 5))
+    # futures.append(executor.submit(calculate_and_save, 0.025, 10))
+    # futures.append(executor.submit(calculate_and_save, 0.008, 4))
+    # futures.append(executor.submit(calculate_and_save, 0.016, 8))
 
 print("--- %s para ---" % (time.time() - start_time))
 
